@@ -1,0 +1,263 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 15, 23, 42;
+  --background-end-rgb: 15, 23, 42;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Animações personalizadas */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Classes utilitárias customizadas */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.6s ease-out;
+}
+
+.animate-slide-in-down {
+  animation: slideInDown 0.6s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.6s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.6s ease-out;
+}
+
+/* Efeitos de hover para cards */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Loading spinner */
+.spinner {
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #f97316;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Estilo para react-hot-toast */
+.Toastify__toast-container {
+  z-index: 9999;
+}
+
+/* Estilo para react-select */
+.react-select-container {
+  .react-select__control {
+    background-color: rgba(17, 24, 39, 0.5);
+    border-color: rgb(55 65 81);
+    border-radius: 0.5rem;
+    
+    &:hover {
+      border-color: rgb(249 115 22);
+    }
+    
+    &--is-focused {
+      border-color: rgb(249 115 22);
+      box-shadow: 0 0 0 1px rgb(249 115 22);
+    }
+  }
+  
+  .react-select__menu {
+    background-color: rgb(31 41 55);
+    border: 1px solid rgb(55 65 81);
+  }
+  
+  .react-select__option {
+    &--is-focused {
+      background-color: rgba(249, 115, 22, 0.1);
+    }
+    
+    &--is-selected {
+      background-color: rgb(249 115 22);
+    }
+  }
+  
+  .react-select__single-value {
+    color: rgb(255 255 255);
+  }
+  
+  .react-select__placeholder {
+    color: rgb(156 163 175);
+  }
+  
+  .react-select__input {
+    color: rgb(255 255 255);
+  }
+}
+
+/* Estilo para react-datepicker */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker__input-container input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: rgba(17, 24, 39, 0.5);
+  border: 1px solid rgb(55 65 81);
+  border-radius: 0.5rem;
+  color: rgb(255 255 255);
+  transition: border-color 0.2s;
+}
+
+.react-datepicker__input-container input:focus {
+  outline: none;
+  border-color: rgb(249 115 22);
+}
+
+.react-datepicker {
+  background-color: rgb(31 41 55);
+  border: 1px solid rgb(55 65 81);
+  border-radius: 0.5rem;
+  color: rgb(255 255 255);
+}
+
+.react-datepicker__header {
+  background-color: rgb(55 65 81);
+  border-bottom: 1px solid rgb(75 85 99);
+}
+
+.react-datepicker__current-month {
+  color: rgb(255 255 255);
+}
+
+.react-datepicker__day-name {
+  color: rgb(156 163 175);
+}
+
+.react-datepicker__day {
+  color: rgb(255 255 255);
+}
+
+.react-datepicker__day:hover {
+  background-color: rgba(249, 115, 22, 0.1);
+}
+
+.react-datepicker__day--selected {
+  background-color: rgb(249 115 22);
+  color: rgb(255 255 255);
+}
+
+.react-datepicker__day--today {
+  background-color: rgba(249, 115, 22, 0.2);
+} 
