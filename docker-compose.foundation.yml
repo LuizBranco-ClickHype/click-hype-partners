@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.10
+    container_name: clickhype_traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - web
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/config.yml:/etc/traefik/config.yml:ro
+      - letsencrypt:/letsencrypt
+    env_file:
+      - ./traefik/.env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${APP_DOMAIN}`)"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=auth@file"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: clickhype_postgres
+    restart: unless-stopped
+    networks:
+      - web
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    env_file:
+      - ./postgres/.env
+    environment:
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    command: ["postgres", "-c", "max_connections=400"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Serviço para testes e verificações
+  healthcheck:
+    image: alpine:latest
+    container_name: clickhype_healthcheck
+    restart: "no"
+    networks:
+      - web
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: |
+      sh -c "
+        echo '✅ Todos os serviços estão funcionando!'
+        echo '🌐 Traefik Dashboard: https://traefik.${APP_DOMAIN}'
+        echo '🗄️ PostgreSQL: Conectado e funcionando'
+        echo '📋 Para verificar os logs: docker-compose logs -f'
+      "
+
+networks:
+  web:
+    external: true
+
+volumes:
+  postgres_data:
+    name: clickhype_postgres_data
+  letsencrypt:
+    name: clickhype_letsencrypt 

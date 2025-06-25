@@ -1,0 +1,40 @@
+http:
+  middlewares:
+    # Middleware para redirecionamento HTTPS
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+    # Middleware para autenticação do dashboard
+    auth:
+      basicAuth:
+        users:
+          - "${TRAEFIK_DASHBOARD_USER}:${TRAEFIK_DASHBOARD_PASSWORD_HASHED}"
+
+    # Middleware de segurança
+    security-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+          - PUT
+        accessControlMaxAge: 100
+        hostsProxyHeaders:
+          - "X-Forwarded-Host"
+        referrerPolicy: "same-origin"
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+
+  routers:
+    # Router para o dashboard do Traefik
+    api:
+      rule: "Host(`traefik.${APP_DOMAIN}`)"
+      service: api@internal
+      middlewares:
+        - auth
+        - security-headers
+      tls:
+        certResolver: letsencrypt
+
+  services: {} 
