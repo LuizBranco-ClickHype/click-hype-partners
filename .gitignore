@@ -1,0 +1,185 @@
+# ===============================================
+# CLICK HYPE PARTNERS - .gitignore
+# Arquivo de configuração para ignorar arquivos sensíveis
+# ===============================================
+
+# ===== ARQUIVOS DE AMBIENTE =====
+# Arquivos de configuração sensíveis
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.*.local
+
+# Manter apenas arquivos de exemplo
+!.env.example
+!.env.production.example
+!.env.development.example
+
+# ===== NODE.JS =====
+# Dependências
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Logs
+logs/
+*.log
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Diretórios de runtime
+.npm
+.eslintcache
+.stylelintcache
+
+# Coverage directory usado por ferramentas como istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# ===== BUILD E DIST =====
+# Diretórios de build
+dist/
+build/
+.next/
+out/
+
+# Arquivos de build
+*.tsbuildinfo
+
+# ===== DOCKER =====
+# Volumes e dados do Docker
+docker-data/
+volumes/
+
+# ===== BANCO DE DADOS =====
+# Arquivos de banco local
+*.sqlite
+*.sqlite3
+*.db
+
+# Dumps de banco
+*.sql
+!postgres/init.sql
+!postgres/migrate-permissions.sql
+!postgres/test-permissions.sql
+
+# ===== UPLOADS E ARQUIVOS TEMPORÁRIOS =====
+# Diretórios de upload
+uploads/
+temp/
+tmp/
+pdfs/
+
+# Arquivos temporários
+*.tmp
+*.temp
+.cache/
+
+# ===== SISTEMA OPERACIONAL =====
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+Desktop.ini
+
+# Linux
+*~
+.nfs*
+
+# ===== IDEs E EDITORES =====
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# ===== FERRAMENTAS DE DESENVOLVIMENTO =====
+# ESLint
+.eslintcache
+
+# Prettier
+.prettierignore
+
+# TypeScript
+*.tsbuildinfo
+
+# Jest
+coverage/
+
+# Storybook
+storybook-static/
+
+# ===== CERTIFICADOS E CHAVES =====
+# Certificados SSL
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Chaves SSH
+id_rsa
+id_rsa.pub
+*.ppk
+
+# ===== TRAEFIK =====
+# Dados do Traefik
+traefik/data/
+acme.json
+
+# ===== MONITORAMENTO =====
+# Dados do Prometheus
+prometheus_data/
+
+# Dados do Grafana
+grafana_data/
+
+# ===== BACKUP =====
+# Arquivos de backup
+*.backup
+*.bak
+backup/
+backups/
+
+# ===== OUTROS =====
+# Arquivos de configuração local
+.local
+.config
+
+# Arquivos de lock específicos
+package-lock.json.bak
+yarn.lock.bak
+
+# Arquivos de teste
+test-results/
+playwright-report/ 
