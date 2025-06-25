@@ -43,14 +43,32 @@ O **Click Hype Partners** é uma plataforma SaaS multi-tenant desenvolvida para 
 
 ## 🚀 Quick Start
 
-### Pré-requisitos
+### ⚡ Instalação Ultra-Rápida (VPS/Servidor)
 
+```bash
+# Instala tudo em 1 comando - perfeito para VPS/produção
+curl -fsSL https://raw.githubusercontent.com/LuizBranco-ClickHype/click-hype-partners/main/install-auto.sh | bash
+```
+
+**Ou com configurações personalizadas:**
+```bash
+APP_DOMAIN=partners.meusite.com \
+ACME_EMAIL=admin@meusite.com \
+curl -fsSL https://raw.githubusercontent.com/LuizBranco-ClickHype/click-hype-partners/main/install-auto.sh | bash
+```
+
+📖 **[Ver guia completo de instalação automática →](README-INSTALACAO.md)**
+
+---
+
+### 🛠️ Instalação Manual/Desenvolvimento
+
+#### Pré-requisitos
 - Docker 20+ e Docker Compose 2+
 - Node.js 18+ (para desenvolvimento)
 - Git
 
-### Instalação Rápida
-
+#### Passos
 ```bash
 # 1. Clone o repositório
 git clone https://github.com/clickhype/click-hype-partners.git
