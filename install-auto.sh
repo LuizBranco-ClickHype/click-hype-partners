@@ -22,11 +22,13 @@ IFS=$'\n\t'
 
 # Configurações
 readonly REPO_URL="https://github.com/LuizBranco-ClickHype/click-hype-partners.git"
+readonly REPO_RAW_URL="https://raw.githubusercontent.com/LuizBranco-ClickHype/click-hype-partners/main"
 readonly PROJECT_NAME="click-hype-partners"
 readonly INSTALL_DIR="/opt/${PROJECT_NAME}"
 readonly SERVICE_USER="clickhype"
 readonly MIN_MEMORY_GB=2
 readonly MIN_DISK_GB=20
+readonly REQUIRED_PORTS=(80 443 3000 3001 5432 8080)
 
 # Cores para output
 readonly RED='\033[0;31m'
@@ -34,10 +36,15 @@ readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
 readonly PURPLE='\033[0;35m'
+readonly CYAN='\033[0;36m'
+readonly WHITE='\033[1;37m'
 readonly NC='\033[0m'
 
 # Variáveis globais
 INTERACTIVE_MODE=false
+SKIP_DEPS=false
+SKIP_FIREWALL=false
+DRY_RUN=false
 
 # Funções de log
 log() { echo -e "${1}${2}${NC}" >&2; }
@@ -74,6 +81,18 @@ parse_args() {
                 INTERACTIVE_MODE=true
                 shift
                 ;;
+            --skip-deps)
+                SKIP_DEPS=true
+                shift
+                ;;
+            --skip-firewall)
+                SKIP_FIREWALL=true
+                shift
+                ;;
+            --dry-run)
+                DRY_RUN=true
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -97,11 +116,16 @@ INSTALAÇÃO RÁPIDA:
 
 OPÇÕES:
   --interactive, -i     Modo interativo (pede configurações)
+  --skip-deps          Pular instalação de dependências
+  --skip-firewall      Pular configuração do firewall
+  --dry-run            Apenas simular (não instalar)
   --help, -h           Mostrar esta ajuda
 
 VARIÁVEIS DE AMBIENTE:
   APP_DOMAIN           Domínio principal (ex: partners.meusite.com)
   ACME_EMAIL           Email para certificados SSL
+  DB_PASSWORD          Senha do banco (gerada automaticamente se não definida)
+  JWT_SECRET           Secret JWT (gerado automaticamente se não definido)
   ADMIN_EMAIL          Email do admin inicial
   ADMIN_PASSWORD       Senha do admin inicial
 
@@ -138,6 +162,81 @@ check_system() {
     log_success "Sistema compatível ✓"
 }
 
+# Verificar recursos do sistema
+check_resources() {
+    log_info "Verificando recursos do sistema..."
+    
+    # Verificar memória
+    local mem_gb=$(free -g | awk '/^Mem:/{print $2}')
+    if [[ $mem_gb -lt $MIN_MEMORY_GB ]]; then
+        log_warning "Memória RAM insuficiente: ${mem_gb}GB (mínimo: ${MIN_MEMORY_GB}GB)"
+        log_info "O sistema pode ficar lento ou falhar sob carga."
+        if [[ $INTERACTIVE_MODE == true ]]; then
+            read -p "Continuar mesmo assim? (y/N): " -r
+            [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+        fi
+    else
+        log_success "Memória RAM: ${mem_gb}GB ✓"
+    fi
+    
+    # Verificar espaço em disco
+    local disk_gb=$(df / | awk 'NR==2{print int($4/1024/1024)}')
+    if [[ $disk_gb -lt $MIN_DISK_GB ]]; then
+        log_error "Espaço em disco insuficiente: ${disk_gb}GB disponível (mínimo: ${MIN_DISK_GB}GB)"
+        exit 1
+    else
+        log_success "Espaço em disco: ${disk_gb}GB disponível ✓"
+    fi
+}
+
+# Verificar portas em uso
+check_ports() {
+    log_info "Verificando portas necessárias..."
+    
+    local ports_in_use=()
+    for port in "${REQUIRED_PORTS[@]}"; do
+        if ss -tlun | grep -q ":$port "; then
+            ports_in_use+=($port)
+        fi
+    done
+    
+    if [[ ${#ports_in_use[@]} -gt 0 ]]; then
+        log_warning "Portas em uso: ${ports_in_use[*]}"
+        log_info "O instalador tentará configurar o sistema automaticamente."
+        if [[ $INTERACTIVE_MODE == true ]]; then
+            read -p "Continuar? (y/N): " -r
+            [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+        fi
+    else
+        log_success "Todas as portas necessárias estão disponíveis ✓"
+    fi
+}
+
+# Instalar dependências
+install_dependencies() {
+    if [[ $SKIP_DEPS == true ]]; then
+        log_info "Pulando instalação de dependências..."
+        return
+    fi
+    
+    log_info "Instalando dependências do sistema..."
+    
+    sudo apt update -qq
+    sudo apt install -y \
+        curl wget git unzip jq bc \
+        software-properties-common \
+        apt-transport-https \
+        ca-certificates \
+        gnupg \
+        lsb-release \
+        htop \
+        ufw \
+        fail2ban \
+        logrotate
+    
+    log_success "Dependências instaladas ✓"
+}
+
 # Instalar Docker
 install_docker() {
     if command -v docker &> /dev/null; then
@@ -151,6 +250,29 @@ install_docker() {
     sudo systemctl enable docker
     sudo systemctl start docker
     log_success "Docker instalado ✓"
+}
+
+# Configurar firewall
+setup_firewall() {
+    if [[ $SKIP_FIREWALL == true ]]; then
+        log_info "Pulando configuração do firewall..."
+        return
+    fi
+    
+    log_info "Configurando firewall..."
+    
+    sudo ufw --force reset
+    sudo ufw default deny incoming
+    sudo ufw default allow outgoing
+    
+    sudo ufw allow ssh
+    
+    sudo ufw allow 80/tcp
+    sudo ufw allow 443/tcp
+    
+    sudo ufw --force enable
+    
+    log_success "Firewall configurado ✓"
 }
 
 # Coletar configurações
@@ -248,7 +370,11 @@ main() {
     parse_args "$@"
     show_banner
     check_system
+    check_resources
+    check_ports
+    install_dependencies
     install_docker
+    setup_firewall
     collect_config
     install_project
     run_installation
@@ -256,6 +382,6 @@ main() {
 }
 
 # Executar se chamado diretamente
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+if [[ "${BASH_SOURCE[0]:-}" == "${0}" ]] || [[ -z "${BASH_SOURCE[0]:-}" ]]; then
     main "$@"
 fi
