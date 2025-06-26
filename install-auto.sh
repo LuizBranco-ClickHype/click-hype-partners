@@ -179,10 +179,14 @@ show_pre_install_info() {
     echo
     
     if [[ $INTERACTIVE_MODE == true ]]; then
-        read -p "Deseja continuar com a instalação? (Y/n): " -r
-        if [[ $REPLY =~ ^[Nn]$ ]]; then
-            log_error "Instalação cancelada pelo usuário"
-            exit 0
+        if [[ -t 0 ]]; then
+            read -p "Deseja continuar com a instalação? (Y/n): " -r </dev/tty
+            if [[ $REPLY =~ ^[Nn]$ ]]; then
+                log_error "Instalação cancelada pelo usuário"
+                exit 0
+            fi
+        else
+            echo "Modo não-interativo: prosseguindo com a instalação..."
         fi
     else
         log_warning "Instalação iniciará em 15 segundos. Pressione Ctrl+C para cancelar..."
@@ -210,8 +214,12 @@ check_system() {
         if getent passwd | grep -q ":/home/"; then
             log_warning "⚠️  Executando como root - use com cuidado!"
             if [[ $INTERACTIVE_MODE == true ]]; then
-                read -p "Continuar como root pode ser inseguro. Confirma? (y/N): " -r
-                [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+                if [[ -t 0 ]]; then
+                    read -p "Continuar como root pode ser inseguro. Confirma? (y/N): " -r </dev/tty
+                    [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+                else
+                    log_warning "Modo não-interativo: prosseguindo como root..."
+                fi
             fi
         fi
         
@@ -239,8 +247,12 @@ check_resources() {
         log_warning "Memória RAM insuficiente: ${total_ram}MB (mínimo: ${MIN_RAM_MB}MB)"
         log_info "O sistema pode ficar lento ou falhar sob carga."
         if [[ $INTERACTIVE_MODE == true ]]; then
-            read -p "Continuar mesmo assim? (y/N): " -r
-            [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+            if [[ -t 0 ]]; then
+                read -p "Continuar mesmo assim? (y/N): " -r </dev/tty
+                [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+            else
+                log_warning "Modo não-interativo: prosseguindo com RAM insuficiente..."
+            fi
         fi
     else
         log_success "Memória RAM: ${total_ram}MB ✓"
@@ -271,8 +283,12 @@ check_ports() {
         log_warning "Portas em uso: ${ports_in_use[*]}"
         log_info "O instalador tentará configurar o sistema automaticamente."
         if [[ $INTERACTIVE_MODE == true ]]; then
-            read -p "Continuar? (y/N): " -r
-            [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+            if [[ -t 0 ]]; then
+                read -p "Continuar? (y/N): " -r </dev/tty
+                [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+            else
+                log_warning "Modo não-interativo: prosseguindo com portas em uso..."
+            fi
         fi
     else
         log_success "Todas as portas necessárias estão disponíveis ✓"
@@ -349,6 +365,13 @@ collect_config() {
     log_header "📋 CONFIGURAÇÃO DO SISTEMA"
     echo
     
+    # Detectar se estamos em pipe (curl | bash)
+    if [[ ! -t 0 ]] && [[ ! -t 1 ]]; then
+        log_warning "Detectado execução via pipe (curl | bash)"
+        log_info "Usando configurações automáticas. Para modo interativo, baixe e execute localmente."
+        echo
+    fi
+    
     # Sempre pedir domínio se não estiver definido
     if [[ -z "${APP_DOMAIN:-}" ]]; then
         local public_ip=$(curl -s ifconfig.me 2>/dev/null || echo "localhost")
@@ -358,7 +381,14 @@ collect_config() {
         echo "   O sistema precisa de um domínio para funcionar corretamente."
         echo "   Você pode usar seu próprio domínio ou o IP público com .nip.io"
         echo
-        read -p "   Digite o domínio [ENTER para usar: $default_domain]: " APP_DOMAIN
+        
+        # Verificar se stdin está disponível
+        if [[ -t 0 ]]; then
+            read -p "   Digite o domínio [ENTER para usar: $default_domain]: " APP_DOMAIN </dev/tty
+        else
+            echo "   Usando domínio padrão: $default_domain"
+            APP_DOMAIN=""
+        fi
         
         if [[ -z "$APP_DOMAIN" ]]; then
             APP_DOMAIN="$default_domain"
@@ -376,7 +406,14 @@ collect_config() {
         echo "   Email necessário para certificados SSL (Let's Encrypt)."
         echo "   Use um email válido para receber notificações importantes."
         echo
-        read -p "   Digite seu email [ENTER para usar: $default_email]: " ACME_EMAIL
+        
+        # Verificar se stdin está disponível
+        if [[ -t 0 ]]; then
+            read -p "   Digite seu email [ENTER para usar: $default_email]: " ACME_EMAIL </dev/tty
+        else
+            echo "   Usando email padrão: $default_email"
+            ACME_EMAIL=""
+        fi
         
         if [[ -z "$ACME_EMAIL" ]]; then
             ACME_EMAIL="$default_email"
@@ -393,7 +430,14 @@ collect_config() {
         echo -e "${CYAN}👤 CONFIGURAÇÃO DO ADMINISTRADOR${NC}"
         echo "   Configure as credenciais do usuário administrador do sistema."
         echo
-        read -p "   Email do admin [ENTER para usar: $default_admin_email]: " ADMIN_EMAIL
+        
+        # Verificar se stdin está disponível
+        if [[ -t 0 ]]; then
+            read -p "   Email do admin [ENTER para usar: $default_admin_email]: " ADMIN_EMAIL </dev/tty
+        else
+            echo "   Usando email admin padrão: $default_admin_email"
+            ADMIN_EMAIL=""
+        fi
         
         if [[ -z "$ADMIN_EMAIL" ]]; then
             ADMIN_EMAIL="$default_admin_email"
@@ -414,10 +458,14 @@ collect_config() {
     echo
     
     if [[ $INTERACTIVE_MODE == true ]]; then
-        read -p "Confirma essas configurações? (Y/n): " -r
-        if [[ $REPLY =~ ^[Nn]$ ]]; then
-            log_error "Configuração cancelada pelo usuário"
-            exit 1
+        if [[ -t 0 ]]; then
+            read -p "Confirma essas configurações? (Y/n): " -r </dev/tty
+            if [[ $REPLY =~ ^[Nn]$ ]]; then
+                log_error "Configuração cancelada pelo usuário"
+                exit 1
+            fi
+        else
+            echo "Modo não-interativo: prosseguindo com as configurações..."
         fi
     else
         log_warning "Aguarde 10 segundos para continuar ou pressione Ctrl+C para cancelar..."
