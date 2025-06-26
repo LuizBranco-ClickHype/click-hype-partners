@@ -22,15 +22,12 @@ IFS=$'\n\t'
 
 # Configurações
 readonly REPO_URL="https://github.com/LuizBranco-ClickHype/click-hype-partners.git"
-readonly REPO_RAW_URL="https://raw.githubusercontent.com/LuizBranco-ClickHype/click-hype-partners/main"
-readonly PROJECT_NAME="click-hype-partners"
-readonly INSTALL_DIR="/opt/${PROJECT_NAME}"
-readonly SERVICE_USER="clickhype"
-readonly MIN_MEMORY_GB=2
-readonly MIN_DISK_GB=20
-readonly REQUIRED_PORTS=(80 443 3000 3001 5432 8080)
+readonly INSTALL_DIR="/opt/click-hype-partners"
+readonly REQUIRED_PORTS=(80 443 5432 6379 3001 9090 3000)
+readonly MIN_RAM_MB=2048
+readonly MIN_DISK_GB=10
 
-# Cores para output
+# Cores
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
@@ -38,7 +35,7 @@ readonly BLUE='\033[0;34m'
 readonly PURPLE='\033[0;35m'
 readonly CYAN='\033[0;36m'
 readonly WHITE='\033[1;37m'
-readonly NC='\033[0m'
+readonly NC='\033[0m' # No Color
 
 # Variáveis globais
 INTERACTIVE_MODE=false
@@ -48,33 +45,43 @@ DRY_RUN=false
 SUDO_CMD="sudo"
 
 # Funções de log
-log() { echo -e "${1}${2}${NC}" >&2; }
-log_info() { log "$BLUE" "ℹ️  $1"; }
-log_success() { log "$GREEN" "✅ $1"; }
-log_warning() { log "$YELLOW" "⚠️  $1"; }
-log_error() { log "$RED" "❌ $1"; }
-log_header() { log "$PURPLE" "$1"; }
-
-# Banner bonito
-show_banner() {
-    clear
-    log_header "
-╔══════════════════════════════════════════════════════════════════════════╗
-║                                                                          ║
-║    🚀 CLICK HYPE PARTNERS - AUTO INSTALADOR VPS v2.0.0 🚀               ║
-║                                                                          ║
-║    Sistema de Gestão para Agências e Partners                           ║
-║    ✨ Instalação Zero-Config para Produção                              ║
-║                                                                          ║
-║    📦 Inclui: Next.js + NestJS + PostgreSQL + Traefik + SSL             ║
-║    🔒 SSL Automático + Monitoramento + Backups + Logs                   ║
-║                                                                          ║
-╚══════════════════════════════════════════════════════════════════════════╝
-"
-    echo
+log_info() {
+    echo -e "${BLUE}ℹ️  ${1}${NC}"
 }
 
-# Verificar argumentos
+log_success() {
+    echo -e "${GREEN}✅ ${1}${NC}"
+}
+
+log_warning() {
+    echo -e "${YELLOW}⚠️  ${1}${NC}"
+}
+
+log_error() {
+    echo -e "${RED}❌ ${1}${NC}"
+}
+
+log_header() {
+    echo -e "${PURPLE}${1}${NC}"
+}
+
+# Banner
+show_banner() {
+    echo -e "${CYAN}"
+    cat << 'EOF'
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║        🚀 CLICK HYPE PARTNERS - AUTO INSTALADOR VPS         ║
+║                                                               ║
+║     Sistema completo de gestão de parceiros empresariais     ║
+║         Backend NestJS + Frontend Next.js + Docker          ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+EOF
+    echo -e "${NC}"
+}
+
+# Processar argumentos
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -107,36 +114,36 @@ parse_args() {
     done
 }
 
-# Mostrar ajuda
+# Ajuda
 show_help() {
     cat << EOF
-Click Hype Partners - Auto Instalador VPS
+CLICK HYPE PARTNERS - Auto Instalador VPS
 
-INSTALAÇÃO RÁPIDA:
-  curl -fsSL https://raw.githubusercontent.com/LuizBranco-ClickHype/click-hype-partners/main/install-auto.sh | bash
+USO:
+    $0 [OPÇÕES]
 
 OPÇÕES:
-  --interactive, -i     Modo interativo (pede configurações)
-  --skip-deps          Pular instalação de dependências
-  --skip-firewall      Pular configuração do firewall
-  --dry-run            Apenas simular (não instalar)
-  --help, -h           Mostrar esta ajuda
+    --interactive, -i     Modo interativo (solicita confirmações)
+    --skip-deps          Pular instalação de dependências
+    --skip-firewall      Pular configuração do firewall
+    --dry-run            Simular instalação (não executar comandos)
+    --help, -h           Mostrar esta ajuda
 
 VARIÁVEIS DE AMBIENTE:
-  APP_DOMAIN           Domínio principal (ex: partners.meusite.com)
-  ACME_EMAIL           Email para certificados SSL
-  DB_PASSWORD          Senha do banco (gerada automaticamente se não definida)
-  JWT_SECRET           Secret JWT (gerado automaticamente se não definido)
-  ADMIN_EMAIL          Email do admin inicial
-  ADMIN_PASSWORD       Senha do admin inicial
+    APP_DOMAIN           Domínio da aplicação (ex: partners.meusite.com)
+    ACME_EMAIL           Email para certificados SSL
+    ADMIN_EMAIL          Email do administrador
+    ADMIN_PASSWORD       Senha do administrador
 
 EXEMPLOS:
-  # Instalação com configurações
-  APP_DOMAIN=partners.exemplo.com ACME_EMAIL=admin@exemplo.com \\
-  curl -fsSL https://raw.githubusercontent.com/LuizBranco-ClickHype/click-hype-partners/main/install-auto.sh | bash
+    # Instalação rápida
+    curl -fsSL https://raw.githubusercontent.com/LuizBranco-ClickHype/click-hype-partners/main/install-auto.sh | bash
 
-  # Modo interativo
-  curl -fsSL https://raw.githubusercontent.com/LuizBranco-ClickHype/click-hype-partners/main/install-auto.sh | bash -s -- --interactive
+    # Instalação interativa
+    curl -fsSL https://raw.githubusercontent.com/LuizBranco-ClickHype/click-hype-partners/main/install-auto.sh | bash -s -- --interactive
+
+    # Com domínio personalizado
+    APP_DOMAIN=partners.meusite.com curl -fsSL https://raw.githubusercontent.com/LuizBranco-ClickHype/click-hype-partners/main/install-auto.sh | bash
 
 EOF
 }
@@ -155,24 +162,21 @@ check_system() {
     if [[ $EUID -eq 0 ]]; then
         log_warning "Executando como usuário root..."
         
-        # Verificar se existem usuários não-root no sistema
-        local non_root_users=$(getent passwd | awk -F: '$3 >= 1000 && $3 != 65534 {print $1}' | head -5)
-        
-        if [[ -n "$non_root_users" ]] && [[ $INTERACTIVE_MODE == true ]]; then
-            log_warning "Usuários disponíveis: $non_root_users"
-            log_info "Por segurança, recomendamos executar com usuário não-root."
-            read -p "Continuar como root mesmo assim? (y/N): " -r
-            [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+        # Verificar se há usuários não-root disponíveis
+        if getent passwd | grep -q ":/home/"; then
+            log_warning "⚠️  Executando como root - use com cuidado!"
+            if [[ $INTERACTIVE_MODE == true ]]; then
+                read -p "Continuar como root pode ser inseguro. Confirma? (y/N): " -r
+                [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+            fi
         fi
         
-        log_warning "⚠️  Executando como root - use com cuidado!"
-        # Definir comando sudo como vazio quando root
+        # Definir comando sudo vazio para root
         SUDO_CMD=""
     else
-        # Verificar se usuário tem privilégios sudo
+        # Verificar se usuário tem sudo
         if ! sudo -n true 2>/dev/null; then
             log_error "Este usuário precisa ter privilégios sudo!"
-            log_info "Execute: usermod -aG sudo $USER"
             exit 1
         fi
         SUDO_CMD="sudo"
@@ -181,31 +185,31 @@ check_system() {
     log_success "Sistema compatível ✓"
 }
 
-# Verificar recursos do sistema
+# Verificar recursos
 check_resources() {
     log_info "Verificando recursos do sistema..."
     
-    # Verificar memória
-    local mem_gb=$(free -g | awk '/^Mem:/{print $2}')
-    if [[ $mem_gb -lt $MIN_MEMORY_GB ]]; then
-        log_warning "Memória RAM insuficiente: ${mem_gb}GB (mínimo: ${MIN_MEMORY_GB}GB)"
+    # Verificar RAM
+    local total_ram=$(free -m | awk 'NR==2{printf "%.0f", $2}')
+    if [[ $total_ram -lt $MIN_RAM_MB ]]; then
+        log_warning "Memória RAM insuficiente: ${total_ram}MB (mínimo: ${MIN_RAM_MB}MB)"
         log_info "O sistema pode ficar lento ou falhar sob carga."
         if [[ $INTERACTIVE_MODE == true ]]; then
             read -p "Continuar mesmo assim? (y/N): " -r
             [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
         fi
     else
-        log_success "Memória RAM: ${mem_gb}GB ✓"
+        log_success "Memória RAM: ${total_ram}MB ✓"
     fi
     
-    # Verificar espaço em disco
-    local disk_gb=$(df / | awk 'NR==2{print int($4/1024/1024)}')
-    if [[ $disk_gb -lt $MIN_DISK_GB ]]; then
-        log_error "Espaço em disco insuficiente: ${disk_gb}GB disponível (mínimo: ${MIN_DISK_GB}GB)"
+    # Verificar disco
+    local available_disk=$(df -BG / | awk 'NR==2 {print $4}' | sed 's/G//')
+    if [[ $available_disk -lt $MIN_DISK_GB ]]; then
+        log_error "Espaço em disco insuficiente: ${available_disk}GB (mínimo: ${MIN_DISK_GB}GB)"
         exit 1
-    else
-        log_success "Espaço em disco: ${disk_gb}GB disponível ✓"
     fi
+    
+    log_success "Espaço em disco: ${available_disk}GB disponível ✓"
 }
 
 # Verificar portas em uso
@@ -341,15 +345,86 @@ install_project() {
     
     cd $INSTALL_DIR
     
-    # Criar .env
+    # Gerar todas as variáveis necessárias
+    DATABASE_PASSWORD="${DB_PASSWORD}"
+    DATABASE_USER="clickhype_user"
+    DATABASE_NAME="clickhype_partners_db"
+    POSTGRES_PASSWORD="${DB_PASSWORD}"
+    POSTGRES_USER="${DATABASE_USER}"
+    POSTGRES_DB="${DATABASE_NAME}"
+    REDIS_PASSWORD="$(openssl rand -base64 16 | tr -d "=+/")"
+    JWT_REFRESH_SECRET="$(openssl rand -base64 32 | tr -d "=+/")"
+    GRAFANA_PASSWORD="$(openssl rand -base64 16 | tr -d "=+/")"
+    TRAEFIK_DASHBOARD_USER="admin"
+    TRAEFIK_DASHBOARD_PASSWORD="$(openssl rand -base64 12 | tr -d "=+/")"
+    TRAEFIK_DASHBOARD_PASSWORD_HASHED=$(echo "$TRAEFIK_DASHBOARD_PASSWORD" | openssl passwd -apr1 -stdin)
+    
+    # Criar .env completo
     cat > .env << EOF
+# ==============================================
+# CONFIGURAÇÕES PRINCIPAIS
+# ==============================================
 NODE_ENV=production
+APP_DOMAIN=${APP_DOMAIN}
 APP_URL=https://${APP_DOMAIN}
-DB_PASSWORD=${DB_PASSWORD}
-JWT_SECRET=${JWT_SECRET}
 TRAEFIK_ACME_EMAIL=${ACME_EMAIL}
+
+# ==============================================
+# BANCO DE DADOS POSTGRESQL
+# ==============================================
+DATABASE_HOST=postgres
+DATABASE_PORT=5432
+DATABASE_USER=${DATABASE_USER}
+DATABASE_PASSWORD=${DATABASE_PASSWORD}
+DATABASE_NAME=${DATABASE_NAME}
+
+# Compatibilidade com docker-compose
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_USER=${POSTGRES_USER}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+POSTGRES_DB=${POSTGRES_DB}
+
+# ==============================================
+# REDIS CACHE
+# ==============================================
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=${REDIS_PASSWORD}
+
+# ==============================================
+# AUTENTICAÇÃO JWT
+# ==============================================
+JWT_SECRET=${JWT_SECRET}
+JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+JWT_EXPIRES_IN=24h
+
+# ==============================================
+# ADMINISTRADOR INICIAL
+# ==============================================
 ADMIN_EMAIL=${ADMIN_EMAIL}
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
+
+# ==============================================
+# TRAEFIK DASHBOARD
+# ==============================================
+TRAEFIK_DASHBOARD_USER=${TRAEFIK_DASHBOARD_USER}
+TRAEFIK_DASHBOARD_PASSWORD_HASHED=${TRAEFIK_DASHBOARD_PASSWORD_HASHED}
+
+# ==============================================
+# MONITORAMENTO - GRAFANA
+# ==============================================
+GRAFANA_USER=admin
+GRAFANA_PASSWORD=${GRAFANA_PASSWORD}
+
+# ==============================================
+# CONFIGURAÇÕES ADICIONAIS
+# ==============================================
+PORT=3001
+RATE_LIMIT_REQUESTS=100
+SESSION_TIMEOUT=60
+MAX_FILE_SIZE=10
+ALLOWED_FILE_TYPES=pdf,jpg,jpeg,png,gif,doc,docx
 EOF
     
     log_success "Projeto configurado ✓"
@@ -360,12 +435,51 @@ run_installation() {
     log_info "Iniciando serviços..."
     
     cd $INSTALL_DIR
-    docker compose up -d
     
-    log_info "Aguardando inicialização..."
-    sleep 30
+    # Verficar memória disponível
+    local total_mem=$(free -m | awk 'NR==2{printf "%.0f", $2}')
     
-    log_success "Instalação concluída ✅"
+    if [[ $total_mem -lt 2048 ]]; then
+        log_warning "Sistema com pouca RAM (${total_mem}MB). Iniciando serviços em etapas..."
+        
+        # Etapa 1: Infraestrutura básica
+        log_info "🔄 Iniciando infraestrutura básica..."
+        docker compose up -d traefik postgres redis
+        sleep 20
+        
+        # Etapa 2: Backend
+        log_info "🔄 Iniciando backend..."
+        docker compose up -d backend
+        sleep 30
+        
+        # Etapa 3: Frontend
+        log_info "🔄 Iniciando frontend..."
+        docker compose up -d frontend
+        sleep 20
+        
+        # Etapa 4: Monitoramento (opcional para sistemas com pouca RAM)
+        if [[ $total_mem -gt 1500 ]]; then
+            log_info "🔄 Iniciando monitoramento..."
+            docker compose up -d prometheus grafana
+        else
+            log_warning "Pulando monitoramento devido à pouca RAM disponível"
+        fi
+        
+    else
+        log_info "Sistema com RAM adequada. Iniciando todos os serviços..."
+        docker compose up -d
+    fi
+    
+    log_info "Aguardando inicialização completa..."
+    sleep 45
+    
+    # Verificar se os serviços principais estão rodando
+    if docker compose ps | grep -q "backend.*Up" && docker compose ps | grep -q "frontend.*Up"; then
+        log_success "Instalação concluída ✅"
+    else
+        log_warning "Alguns serviços podem ainda estar inicializando..."
+        log_info "Use 'docker compose logs -f' para acompanhar os logs"
+    fi
 }
 
 # Exibir informações finais
@@ -373,17 +487,65 @@ show_final_info() {
     echo
     log_header "🎉 CLICK HYPE PARTNERS INSTALADO COM SUCESSO!"
     echo
-    echo "🌐 URL: https://$APP_DOMAIN"
-    echo "👤 Admin: $ADMIN_EMAIL"
-    echo "🔑 Senha: $ADMIN_PASSWORD"
-    echo "📁 Diretório: $INSTALL_DIR"
+    echo "🌐 ACESSO PRINCIPAL:"
+    echo "  URL: https://$APP_DOMAIN"
+    echo "  Admin: $ADMIN_EMAIL"
+    echo "  Senha: $ADMIN_PASSWORD"
     echo
-    echo "🔧 Comandos úteis:"
-    echo "  docker compose logs -f    # Ver logs"
-    echo "  docker compose restart    # Reiniciar"
-    echo "  docker compose down       # Parar"
+    echo "🔧 DASHBOARDS ADMINISTRATIVOS:"
+    echo "  Traefik: https://$APP_DOMAIN/traefik/"
+    echo "  Usuário: $TRAEFIK_DASHBOARD_USER"
+    echo "  Senha: $TRAEFIK_DASHBOARD_PASSWORD"
     echo
-    log_warning "⚠️  Salve as credenciais em local seguro!"
+    if docker compose ps | grep -q "grafana.*Up"; then
+        echo "  Grafana: https://$APP_DOMAIN/grafana/"
+        echo "  Usuário: admin"
+        echo "  Senha: $GRAFANA_PASSWORD"
+        echo
+    fi
+    echo "📁 DIRETÓRIO: $INSTALL_DIR"
+    echo
+    echo "🔧 COMANDOS ÚTEIS:"
+    echo "  cd $INSTALL_DIR"
+    echo "  docker compose logs -f              # Ver logs"
+    echo "  docker compose restart              # Reiniciar"
+    echo "  docker compose down                 # Parar"
+    echo "  docker compose ps                   # Status"
+    echo "  docker system prune -f              # Limpar espaço"
+    echo
+    echo "📋 ARQUIVO DE CREDENCIAIS:"
+    echo "  cat $INSTALL_DIR/.env"
+    echo
+    log_warning "⚠️  IMPORTANTE: Salve TODAS as credenciais em local seguro!"
+    
+    # Salvar credenciais em arquivo
+    cat > "$INSTALL_DIR/CREDENCIAIS.txt" << EOF
+==============================================
+CLICK HYPE PARTNERS - CREDENCIAIS
+==============================================
+
+🌐 ACESSO PRINCIPAL:
+URL: https://$APP_DOMAIN
+Admin: $ADMIN_EMAIL
+Senha: $ADMIN_PASSWORD
+
+🔧 TRAEFIK DASHBOARD:
+URL: https://$APP_DOMAIN/traefik/
+Usuário: $TRAEFIK_DASHBOARD_USER
+Senha: $TRAEFIK_DASHBOARD_PASSWORD
+
+📊 GRAFANA (se disponível):
+URL: https://$APP_DOMAIN/grafana/
+Usuário: admin
+Senha: $GRAFANA_PASSWORD
+
+📁 Diretório: $INSTALL_DIR
+📅 Instalado em: $(date)
+
+⚠️  MANTENHA ESTE ARQUIVO EM LOCAL SEGURO!
+EOF
+    
+    echo "💾 Credenciais salvas em: $INSTALL_DIR/CREDENCIAIS.txt"
 }
 
 # Função principal
