@@ -45,6 +45,7 @@ INTERACTIVE_MODE=false
 SKIP_DEPS=false
 SKIP_FIREWALL=false
 DRY_RUN=false
+SUDO_CMD="sudo"
 
 # Funções de log
 log() { echo -e "${1}${2}${NC}" >&2; }
@@ -144,19 +145,37 @@ EOF
 check_system() {
     log_info "Verificando sistema..."
     
-    if [[ $EUID -eq 0 ]]; then
-        log_error "Este script não deve ser executado como root!"
-        exit 1
-    fi
-
-    if ! sudo -n true 2>/dev/null; then
-        log_error "Este usuário precisa ter privilégios sudo!"
-        exit 1
-    fi
-
+    # Verificar sistema operacional
     if [[ "$OSTYPE" != "linux-gnu"* ]]; then
         log_error "Sistema não suportado: $OSTYPE"
         exit 1
+    fi
+    
+    # Verificar execução como root
+    if [[ $EUID -eq 0 ]]; then
+        log_warning "Executando como usuário root..."
+        
+        # Verificar se existem usuários não-root no sistema
+        local non_root_users=$(getent passwd | awk -F: '$3 >= 1000 && $3 != 65534 {print $1}' | head -5)
+        
+        if [[ -n "$non_root_users" ]] && [[ $INTERACTIVE_MODE == true ]]; then
+            log_warning "Usuários disponíveis: $non_root_users"
+            log_info "Por segurança, recomendamos executar com usuário não-root."
+            read -p "Continuar como root mesmo assim? (y/N): " -r
+            [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+        fi
+        
+        log_warning "⚠️  Executando como root - use com cuidado!"
+        # Definir comando sudo como vazio quando root
+        SUDO_CMD=""
+    else
+        # Verificar se usuário tem privilégios sudo
+        if ! sudo -n true 2>/dev/null; then
+            log_error "Este usuário precisa ter privilégios sudo!"
+            log_info "Execute: usermod -aG sudo $USER"
+            exit 1
+        fi
+        SUDO_CMD="sudo"
     fi
 
     log_success "Sistema compatível ✓"
@@ -221,8 +240,8 @@ install_dependencies() {
     
     log_info "Instalando dependências do sistema..."
     
-    sudo apt update -qq
-    sudo apt install -y \
+    $SUDO_CMD apt update -qq
+    $SUDO_CMD apt install -y \
         curl wget git unzip jq bc \
         software-properties-common \
         apt-transport-https \
@@ -246,9 +265,9 @@ install_docker() {
     
     log_info "Instalando Docker..."
     curl -fsSL https://get.docker.com | sh
-    sudo usermod -aG docker $USER
-    sudo systemctl enable docker
-    sudo systemctl start docker
+    $SUDO_CMD usermod -aG docker $USER
+    $SUDO_CMD systemctl enable docker
+    $SUDO_CMD systemctl start docker
     log_success "Docker instalado ✓"
 }
 
@@ -261,16 +280,16 @@ setup_firewall() {
     
     log_info "Configurando firewall..."
     
-    sudo ufw --force reset
-    sudo ufw default deny incoming
-    sudo ufw default allow outgoing
+    $SUDO_CMD ufw --force reset
+    $SUDO_CMD ufw default deny incoming
+    $SUDO_CMD ufw default allow outgoing
     
-    sudo ufw allow ssh
+    $SUDO_CMD ufw allow ssh
     
-    sudo ufw allow 80/tcp
-    sudo ufw allow 443/tcp
+    $SUDO_CMD ufw allow 80/tcp
+    $SUDO_CMD ufw allow 443/tcp
     
-    sudo ufw --force enable
+    $SUDO_CMD ufw --force enable
     
     log_success "Firewall configurado ✓"
 }
@@ -309,8 +328,10 @@ collect_config() {
 install_project() {
     log_info "Baixando projeto..."
     
-    sudo mkdir -p $INSTALL_DIR
-    sudo chown $USER:$USER $INSTALL_DIR
+    $SUDO_CMD mkdir -p $INSTALL_DIR
+    if [[ $EUID -ne 0 ]]; then
+        $SUDO_CMD chown $USER:$USER $INSTALL_DIR
+    fi
     
     if [[ -d "$INSTALL_DIR/.git" ]]; then
         cd $INSTALL_DIR && git pull
