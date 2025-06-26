@@ -148,6 +148,50 @@ EXEMPLOS:
 EOF
 }
 
+# Mostrar informações pré-instalação
+show_pre_install_info() {
+    echo
+    log_header "📋 INFORMAÇÕES PRÉ-INSTALAÇÃO"
+    echo
+    echo -e "${CYAN}🔧 O QUE SERÁ INSTALADO:${NC}"
+    echo "   • Docker e Docker Compose"
+    echo "   • Sistema Click Hype Partners completo"
+    echo "   • Proxy reverso Traefik com SSL automático"
+    echo "   • Banco PostgreSQL e cache Redis"
+    echo "   • Monitoramento Prometheus + Grafana"
+    echo "   • Firewall UFW configurado"
+    echo
+    echo -e "${CYAN}📁 DIRETÓRIOS CRIADOS:${NC}"
+    echo "   • /opt/click-hype-partners (aplicação)"
+    echo "   • Logs e dados em volumes Docker"
+    echo
+    echo -e "${CYAN}🌐 PORTAS UTILIZADAS:${NC}"
+    echo "   • 80/443 (HTTP/HTTPS público)"
+    echo "   • 5432 (PostgreSQL interno)"
+    echo "   • 6379 (Redis interno)"
+    echo "   • 3001 (Backend interno)"
+    echo "   • 9090/3000 (Monitoramento interno)"
+    echo
+    echo -e "${YELLOW}⚠️  IMPORTANTE:${NC}"
+    echo "   • O processo pode demorar 5-15 minutos"
+    echo "   • Mantenha a conexão de internet estável"
+    echo "   • Salve as credenciais que serão exibidas"
+    echo
+    
+    if [[ $INTERACTIVE_MODE == true ]]; then
+        read -p "Deseja continuar com a instalação? (Y/n): " -r
+        if [[ $REPLY =~ ^[Nn]$ ]]; then
+            log_error "Instalação cancelada pelo usuário"
+            exit 0
+        fi
+    else
+        log_warning "Instalação iniciará em 15 segundos. Pressione Ctrl+C para cancelar..."
+        sleep 15
+    fi
+    
+    echo
+}
+
 # Verificar sistema
 check_system() {
     log_info "Verificando sistema..."
@@ -301,29 +345,84 @@ setup_firewall() {
 # Coletar configurações
 collect_config() {
     log_info "Configurando ambiente..."
+    echo
+    log_header "📋 CONFIGURAÇÃO DO SISTEMA"
+    echo
     
+    # Sempre pedir domínio se não estiver definido
     if [[ -z "${APP_DOMAIN:-}" ]]; then
-        if [[ $INTERACTIVE_MODE == true ]]; then
-            read -p "🌐 Digite o domínio (ex: partners.meusite.com): " APP_DOMAIN
-        else
-            local public_ip=$(curl -s ifconfig.me 2>/dev/null || echo "localhost")
-            APP_DOMAIN="${public_ip}.nip.io"
-            log_warning "Usando domínio: $APP_DOMAIN"
+        local public_ip=$(curl -s ifconfig.me 2>/dev/null || echo "localhost")
+        local default_domain="${public_ip}.nip.io"
+        
+        echo -e "${CYAN}🌐 CONFIGURAÇÃO DE DOMÍNIO${NC}"
+        echo "   O sistema precisa de um domínio para funcionar corretamente."
+        echo "   Você pode usar seu próprio domínio ou o IP público com .nip.io"
+        echo
+        read -p "   Digite o domínio [ENTER para usar: $default_domain]: " APP_DOMAIN
+        
+        if [[ -z "$APP_DOMAIN" ]]; then
+            APP_DOMAIN="$default_domain"
         fi
+        
+        log_info "Domínio configurado: $APP_DOMAIN"
+        echo
     fi
     
+    # Sempre pedir email se não estiver definido
     if [[ -z "${ACME_EMAIL:-}" ]]; then
-        if [[ $INTERACTIVE_MODE == true ]]; then
-            read -p "📧 Digite seu email para SSL: " ACME_EMAIL
-        else
-            ACME_EMAIL="admin@${APP_DOMAIN}"
+        local default_email="admin@${APP_DOMAIN}"
+        
+        echo -e "${CYAN}📧 CONFIGURAÇÃO DE EMAIL${NC}"
+        echo "   Email necessário para certificados SSL (Let's Encrypt)."
+        echo "   Use um email válido para receber notificações importantes."
+        echo
+        read -p "   Digite seu email [ENTER para usar: $default_email]: " ACME_EMAIL
+        
+        if [[ -z "$ACME_EMAIL" ]]; then
+            ACME_EMAIL="$default_email"
+        fi
+        
+        log_info "Email configurado: $ACME_EMAIL"
+        echo
+    fi
+    
+    # Configurar credenciais de administrador
+    if [[ -z "${ADMIN_EMAIL:-}" ]]; then
+        local default_admin_email="admin@${APP_DOMAIN}"
+        
+        echo -e "${CYAN}👤 CONFIGURAÇÃO DO ADMINISTRADOR${NC}"
+        echo "   Configure as credenciais do usuário administrador do sistema."
+        echo
+        read -p "   Email do admin [ENTER para usar: $default_admin_email]: " ADMIN_EMAIL
+        
+        if [[ -z "$ADMIN_EMAIL" ]]; then
+            ADMIN_EMAIL="$default_admin_email"
         fi
     fi
     
+    # Gerar senhas automaticamente
     DB_PASSWORD="${DB_PASSWORD:-$(openssl rand -base64 16 | tr -d "=+/")}"
     JWT_SECRET="${JWT_SECRET:-$(openssl rand -base64 32 | tr -d "=+/")}"
-    ADMIN_EMAIL="${ADMIN_EMAIL:-admin@${APP_DOMAIN}}"
     ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(openssl rand -base64 12 | tr -d "=+/")}"
+    
+    # Mostrar resumo da configuração
+    echo -e "${GREEN}✅ RESUMO DA CONFIGURAÇÃO:${NC}"
+    echo "   🌐 Domínio: $APP_DOMAIN"
+    echo "   📧 Email SSL: $ACME_EMAIL"
+    echo "   👤 Admin: $ADMIN_EMAIL"
+    echo "   🔑 Senha Admin: $ADMIN_PASSWORD"
+    echo
+    
+    if [[ $INTERACTIVE_MODE == true ]]; then
+        read -p "Confirma essas configurações? (Y/n): " -r
+        if [[ $REPLY =~ ^[Nn]$ ]]; then
+            log_error "Configuração cancelada pelo usuário"
+            exit 1
+        fi
+    else
+        log_warning "Aguarde 10 segundos para continuar ou pressione Ctrl+C para cancelar..."
+        sleep 10
+    fi
     
     log_success "Configuração coletada ✓"
 }
@@ -552,6 +651,7 @@ EOF
 main() {
     parse_args "$@"
     show_banner
+    show_pre_install_info
     check_system
     check_resources
     check_ports
